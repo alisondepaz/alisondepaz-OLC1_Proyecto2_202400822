@@ -1,0 +1,15 @@
+{
+  "name": "goscript-interpreter",
+  "version": "1.0.0",
+  "description": "Interprete para el lenguaje GoScript - OLC1 Proyecto 2",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "build-grammar": "cd backend/grammar && npx jison goscript.jison -o ../grammar_gen/parser.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "jison": "^0.4.18"
+  }
+}

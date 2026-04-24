@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GoScript IDE</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header id="topbar">
+  <div id="logo">GoScript IDE</div>
+  <div id="menu-bar">
+    <button onclick="newFile()"        title="Nuevo archivo">+ Nuevo</button>
+    <button onclick="openFile()"       title="Abrir archivo .gst">Abrir</button>
+    <button onclick="saveFile()"       title="Guardar archivo .gst">Guardar</button>
+    <button onclick="runCode()"        id="btn-run">▶ Ejecutar</button>
+    <button onclick="showErrors()"     id="btn-errors">Errores</button>
+    <button onclick="showSymbols()"    id="btn-symbols">Tabla Símbolos</button>
+    <button onclick="showAST()"        id="btn-ast">AST</button>
+  </div>
+  <input type="file" id="file-input" accept=".gst" style="display:none" onchange="loadFile(event)" />
+</header>
+
+<div id="tabs-bar">
+  <div id="tabs-container"></div>
+  <button id="btn-new-tab" onclick="newFile()" title="Nuevo archivo">+</button>
+</div>
+
+<div id="main-layout">
+
+  <div id="sidebar">
+    <div class="sidebar-title">Archivos</div>
+    <ul id="file-list"></ul>
+  </div>
+
+  <div id="editor-area">
+    <div id="editor-header">
+      <span id="current-filename">sin título.gst</span>
+    </div>
+    <div id="editor-wrapper">
+      <div id="line-numbers"></div>
+      <textarea id="editor"
+        spellcheck="false"
+        placeholder="Escribe tu código GoScript aquí..."
+        oninput="onEditorInput()"
+        onkeydown="handleTab(event)"
+        onscroll="syncScroll()"
+      ></textarea>
+    </div>
+  </div>
+
+  <!-- DERECHA: consola y reportes -->
+  <div id="right-panel">
+    <div id="panel-tabs">
+      <button class="ptab active" onclick="switchPanel('console', this)">Consola</button>
+      <button class="ptab" onclick="switchPanel('errors', this)">Errores</button>
+      <button class="ptab" onclick="switchPanel('symbols', this)">Símbolos</button>
+      <button class="ptab" onclick="switchPanel('ast', this)">AST</button>
+    </div>
+
+    <div id="panel-console"  class="panel-content active">
+      <div id="console-output"></div>
+    </div>
+
+    <div id="panel-errors"   class="panel-content">
+      <table id="errors-table">
+        <thead><tr><th>#</th><th>Descripción</th><th>Línea</th><th>Columna</th><th>Tipo</th></tr></thead>
+        <tbody id="errors-body"></tbody>
+      </table>
+    </div>
+
+    <div id="panel-symbols"  class="panel-content">
+      <table id="symbols-table">
+        <thead><tr><th>ID</th><th>Tipo símbolo</th><th>Tipo dato</th><th>Ámbito</th><th>Línea</th><th>Col</th></tr></thead>
+        <tbody id="symbols-body"></tbody>
+      </table>
+    </div>
+
+    <div id="panel-ast"      class="panel-content">
+      <div id="ast-container">
+        <p style="color:var(--text-muted); padding:12px;">Ejecuta el código para ver el AST.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="status-bar">
+  <span id="status-pos">Línea 1, Col 1</span>
+  <span id="status-msg"></span>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/editor.js"></script>
+</body>
+</html>
