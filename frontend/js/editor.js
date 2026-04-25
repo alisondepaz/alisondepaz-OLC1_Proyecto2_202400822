@@ -1,7 +1,30 @@
 let files   = [];
 let current = null;
 
+function getEditor() {
+  return document.getElementById('editor');
+}
+
+function getEditorText() {
+  return getEditor().innerText || '';
+}
+
+function setEditorText(text) {
+  const el = getEditor();
+  el.innerText = text;
+  updateLineNumbers();
+  updateStatusBar();
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+  const el = getEditor();
+
+  el.addEventListener('input', onEditorInput);
+  el.addEventListener('keydown', handleTab);
+  el.addEventListener('scroll', syncScroll);
+  el.addEventListener('click', updateStatusBar);
+  el.addEventListener('keyup', updateStatusBar);
+
   newFile();
   updateLineNumbers();
   updateStatusBar();
@@ -19,14 +42,14 @@ function newFile() {
 function switchFile(id) {
   if (current !== null) {
     const f = files.find(f => f.id === current);
-    if (f) f.content = document.getElementById('editor').value;
+    if (f) f.content = getEditorText();
   }
   current = id;
   const f = files.find(f => f.id === id);
   if (!f) return;
-  document.getElementById('editor').value = f.content;
+
+  setEditorText(f.content);
   document.getElementById('current-filename').textContent = f.name;
-  updateLineNumbers();
   renderTabs();
   renderFileList();
   clearPanels();
@@ -87,7 +110,7 @@ function loadFile(event) {
 function saveFile() {
   const f = files.find(f => f.id === current);
   if (!f) return;
-  f.content = document.getElementById('editor').value;
+  f.content = getEditorText();
   const blob = new Blob([f.content], { type: 'text/plain' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -100,7 +123,7 @@ function saveFile() {
 
 function onEditorInput() {
   const f = files.find(f => f.id === current);
-  if (f) f.content = document.getElementById('editor').value;
+  if (f) f.content = getEditorText();
   updateLineNumbers();
   updateStatusBar();
 }
@@ -108,22 +131,18 @@ function onEditorInput() {
 function handleTab(e) {
   if (e.key !== 'Tab') return;
   e.preventDefault();
-  const ta  = document.getElementById('editor');
-  const start = ta.selectionStart;
-  const end   = ta.selectionEnd;
-  ta.value = ta.value.substring(0, start) + '    ' + ta.value.substring(end);
-  ta.selectionStart = ta.selectionEnd = start + 4;
+  document.execCommand('insertText', false, '    ');
   onEditorInput();
 }
 
 function syncScroll() {
-  const ta = document.getElementById('editor');
-  document.getElementById('line-numbers').scrollTop = ta.scrollTop;
+  const el = getEditor();
+  document.getElementById('line-numbers').scrollTop = el.scrollTop;
 }
 
 function updateLineNumbers() {
-  const ta    = document.getElementById('editor');
-  const lines = ta.value.split('\n').length;
+  const text  = getEditorText();
+  const lines = text === '' ? 1 : text.split('\n').length;
   const ln    = document.getElementById('line-numbers');
   let html    = '';
   for (let i = 1; i <= lines; i++) html += i + '\n';
@@ -131,25 +150,35 @@ function updateLineNumbers() {
 }
 
 function updateStatusBar() {
-  const ta  = document.getElementById('editor');
-  const val = ta.value;
-  const pos = ta.selectionStart || 0;
-  const before = val.substring(0, pos);
-  const line   = before.split('\n').length;
-  const col    = before.split('\n').pop().length + 1;
+  const sel = window.getSelection();
+  let line = 1, col = 1;
+  if (sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0).cloneRange();
+    range.collapse(true);
+    const text = getEditorText();
+    const offset = getTextOffset();
+    const before = text.substring(0, offset);
+    line = before.split('\n').length;
+    col  = before.split('\n').pop().length + 1;
+  }
   document.getElementById('status-pos').textContent = `Línea ${line}, Col ${col}`;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('editor').addEventListener('click', updateStatusBar);
-  document.getElementById('editor').addEventListener('keyup', updateStatusBar);
-});
+function getTextOffset() {
+  const el  = getEditor();
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return 0;
+  const range = sel.getRangeAt(0).cloneRange();
+  range.selectNodeContents(el);
+  range.setEnd(sel.anchorNode, sel.anchorOffset);
+  return range.toString().length;
+}
 
 async function runCode() {
-  const btn  = document.getElementById('btn-run');
-  const f    = files.find(f => f.id === current);
+  const btn = document.getElementById('btn-run');
+  const f   = files.find(f => f.id === current);
   if (!f) return;
-  f.content  = document.getElementById('editor').value;
+  f.content  = getEditorText();
   const code = f.content;
 
   btn.disabled    = true;
@@ -170,7 +199,6 @@ async function runCode() {
     return;
   }
 
-  // Consola
   if (result.output && result.output.trim()) {
     result.output.split('\n').forEach(line => appendConsole(line, 'normal'));
   } else if (!result.errors || result.errors.length === 0) {
@@ -178,9 +206,7 @@ async function runCode() {
   }
 
   renderErrors(result.errors || []);
-
   renderSymbols(result.symbols || []);
-
   if (result.ast) renderAST(result.ast);
 
   const nerr = (result.errors || []).length;
@@ -195,8 +221,7 @@ function switchPanel(name, btn) {
 }
 
 function showPanelTab(name) {
-  const btns = document.querySelectorAll('.ptab');
-  btns.forEach(b => {
+  document.querySelectorAll('.ptab').forEach(b => {
     if (b.textContent.toLowerCase().includes(name)) b.classList.add('active');
     else b.classList.remove('active');
   });
@@ -209,7 +234,7 @@ function showSymbols() { switchPanel('symbols', document.querySelectorAll('.ptab
 function showAST()     { switchPanel('ast',     document.querySelectorAll('.ptab')[3]); }
 
 function appendConsole(text, type) {
-  const div = document.getElementById('console-output');
+  const div  = document.getElementById('console-output');
   const span = document.createElement('div');
   span.className = 'console-line ' + (type === 'error' ? 'error' : type === 'info' ? 'info' : '');
   span.textContent = text;
@@ -217,10 +242,10 @@ function appendConsole(text, type) {
 }
 
 function clearPanels() {
-  document.getElementById('console-output').innerHTML  = '';
-  document.getElementById('errors-body').innerHTML     = '';
-  document.getElementById('symbols-body').innerHTML    = '';
-  document.getElementById('ast-container').innerHTML   =
+  document.getElementById('console-output').innerHTML = '';
+  document.getElementById('errors-body').innerHTML    = '';
+  document.getElementById('symbols-body').innerHTML   = '';
+  document.getElementById('ast-container').innerHTML  =
     '<p style="color:var(--text-muted); padding:12px;">Ejecuta el código para ver el AST.</p>';
 }
 

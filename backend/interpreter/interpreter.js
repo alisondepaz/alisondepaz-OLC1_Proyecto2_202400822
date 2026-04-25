@@ -249,7 +249,6 @@ class Interpreter {
       const r = this.execBlock(node.body, env, 'for');
       if (r instanceof ReturnSignal)  return r;
       if (r instanceof BreakSignal)   break;
-      // ContinueSignal: continua el loop
     }
     return null;
   }
@@ -305,7 +304,6 @@ class Interpreter {
       case 'IntLit':    return node.value;
       case 'FloatLit':  return node.value;
       case 'StringLit': {
-        // Procesar secuencias de escape
         return node.value
           .replace(/\\n/g, '\n')
           .replace(/\\t/g, '\t')
@@ -430,7 +428,7 @@ class Interpreter {
     if (tL === 'string' || tR === 'string') {
       return this.toDisplayStr(L) + this.toDisplayStr(R);
     }
-    if (tL === 'bool' && tR === 'bool') return L || R; // bool+bool => bool (OR lógico)
+    if (tL === 'bool' && tR === 'bool') return L || R;
     const nL = this.toNum(L, tL), nR = this.toNum(R, tR);
     if (tL === 'float64' || tR === 'float64') return nL + nR;
     return (nL + nR) | 0;
@@ -438,7 +436,7 @@ class Interpreter {
 
   opSub(L, R) {
     const tL = this.inferType(L), tR = this.inferType(R);
-    if (tL === 'bool' && tR === 'bool') return L && !R; // bool - bool => bool
+    if (tL === 'bool' && tR === 'bool') return L && !R;
     const nL = this.toNum(L, tL), nR = this.toNum(R, tR);
     if (tL === 'float64' || tR === 'float64') return nL - nR;
     return (nL - nR) | 0;
@@ -449,7 +447,7 @@ class Interpreter {
     const nL = this.toNum(L, tL), nR = this.toNum(R, tR);
     if (tL === 'int' && tR === 'string') return R.repeat(nL);
     if (tL === 'string' && tR === 'int') return L.repeat(nR);
-    if (tL === 'bool' && tR === 'bool') return L && R; // bool*bool => bool
+    if (tL === 'bool' && tR === 'bool') return L && R;
     if (tL === 'float64' || tR === 'float64') return nL * nR;
     return (nL * nR) | 0;
   }

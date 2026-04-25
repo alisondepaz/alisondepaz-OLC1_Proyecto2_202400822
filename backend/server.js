@@ -6,8 +6,6 @@ const path       = require('path');
 const fs         = require('fs');
 const { Interpreter } = require('./interpreter/interpreter');
 
-// El parser se genera con: npx jison grammar/goscript.jison -o grammar_gen/parser.js
-// Si no existe aun, se usa un parser de respaldo que solo reporta error
 let parser = null;
 const parserPath = path.join(__dirname, 'grammar_gen', 'parser.js');
 if (fs.existsSync(parserPath)) {
@@ -23,9 +21,6 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// =====================================================
-// RUTA PRINCIPAL: ejecutar código GoScript
-// =====================================================
 app.post('/api/run', (req, res) => {
   const { code } = req.body;
   if (!code) return res.json({ output: '', errors: [], symbols: [], ast: null });
@@ -35,7 +30,6 @@ app.post('/api/run', (req, res) => {
   let output    = '';
   let symbols   = [];
 
-  // Análisis léxico y sintáctico
   if (!parser) {
     errors.push({ desc: 'Parser no generado. Ejecuta: npm run build-grammar', line: 0, col: 0, tipo: 'Sistema' });
     return res.json({ output, errors, symbols, ast });
@@ -44,7 +38,6 @@ app.post('/api/run', (req, res) => {
   try {
     ast = parser.parse(code);
   } catch (e) {
-    // Jison lanza errores con información de línea/columna
     const msg = String(e.message || e);
     const lineMatch = msg.match(/line[: ]+(\d+)/i);
     const colMatch  = msg.match(/col(?:umn)?[: ]+(\d+)/i);
@@ -57,7 +50,6 @@ app.post('/api/run', (req, res) => {
     return res.json({ output, errors, symbols, ast });
   }
 
-  // Interpretación
   if (ast && errors.length === 0) {
     try {
       const interp = new Interpreter();
@@ -74,9 +66,6 @@ app.post('/api/run', (req, res) => {
   res.json({ output, errors, symbols, ast });
 });
 
-// =====================================================
-// RUTA: solo análisis (sin ejecucion)
-// =====================================================
 app.post('/api/analyze', (req, res) => {
   const { code } = req.body;
   if (!code) return res.json({ errors: [], ast: null });
@@ -106,7 +95,6 @@ app.post('/api/analyze', (req, res) => {
   res.json({ errors, ast });
 });
 
-// Servir frontend en la raíz
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
